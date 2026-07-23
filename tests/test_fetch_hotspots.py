@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from wewrite.commands.fetch_hotspots import (
     fetch_unified,
+    fetch_zhihu,
     deduplicate,
 )
 
@@ -122,3 +123,76 @@ class TestFetchUnified:
         assert items[0]["hot"] == 1234000   # 123.4万
         assert items[1]["hot"] == 120000000  # 1.2亿
         assert items[2]["hot"] == 5678        # raw int
+
+
+class TestFetchZhihu:
+    """Tests for the Zhihu native API fetcher."""
+
+    def test_parses_zhihu_hot_list(self):
+        """Valid Zhihu API response produces items with correct fields."""
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {
+            "data": [
+                {
+                    "target": {
+                        "id": 123456,
+                        "title": "如何看待AI发展？",
+                        "excerpt": "AI正在改变世界...",
+                    },
+                    "detail_text": "1000 万热度",
+                },
+                {
+                    "target": {
+                        "id": 789012,
+                        "title": "2025年经济展望",
+                        "excerpt": "经济学家预测...",
+                    },
+                    "detail_text": "800 万热度",
+                },
+            ]
+        }
+        with patch(
+            "wewrite.commands.fetch_hotspots._request_with_retry",
+            return_value=mock_resp,
+        ):
+            items = fetch_zhihu()
+
+        assert len(items) == 2
+        assert items[0]["title"] == "如何看待AI发展？"
+        assert items[0]["source"] == "知乎"
+        assert items[0]["url"] == "https://www.zhihu.com/question/123456"
+        assert items[0]["description"] == "AI正在改变世界..."
+        assert items[1]["title"] == "2025年经济展望"
+
+    def test_skips_items_with_empty_title(self):
+        """Items with empty target.title are filtered out."""
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {
+            "data": [
+                {
+                    "target": {"id": 1, "title": "", "excerpt": ""},
+                    "detail_text": "100 万热度",
+                },
+                {
+                    "target": {"id": 2, "title": "有效问题", "excerpt": ""},
+                    "detail_text": "200 万热度",
+                },
+            ]
+        }
+        with patch(
+            "wewrite.commands.fetch_hotspots._request_with_retry",
+            return_value=mock_resp,
+        ):
+            items = fetch_zhihu()
+
+        assert len(items) == 1
+        assert items[0]["title"] == "有效问题"
+
+    def test_returns_empty_list_on_failure(self):
+        """Network error returns [] gracefully."""
+        with patch(
+            "wewrite.commands.fetch_hotspots._request_with_retry",
+            side_effect=Exception("Timeout"),
+        ):
+            items = fetch_zhihu()
+        assert items == []

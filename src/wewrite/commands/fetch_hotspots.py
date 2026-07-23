@@ -212,6 +212,40 @@ def fetch_unified(platform: str) -> list[dict]:
         return []
 
 
+def fetch_zhihu() -> list[dict]:
+    """Fetch Zhihu hot list via native API.
+
+    Uses zhihu.com/api/v3/feed/topstory/hot-list-web which returns
+    structured JSON with target.title, target.excerpt, and detail_text.
+    """
+    try:
+        resp = _request_with_retry(
+            "https://www.zhihu.com/api/v3/feed/topstory/hot-list-web",
+            source="zhihu",
+        )
+        data = resp.json()
+        items = []
+        for entry in data.get("data", []):
+            target = entry.get("target", {})
+            title = (target.get("title") or "").strip()
+            if not title:
+                continue
+            excerpt = (target.get("excerpt") or "")[:100]
+            # detail_text is a Chinese string like "1000 万热度" — parse it
+            heat = _parse_heat_value(entry.get("detail_text", ""))
+            items.append({
+                "title": title,
+                "source": "知乎",
+                "hot": heat,
+                "url": f"https://www.zhihu.com/question/{target.get('id', '')}",
+                "description": excerpt,
+            })
+        return items
+    except Exception as e:
+        print(f"[warn] zhihu failed: {e}", file=sys.stderr)
+        return []
+
+
 def deduplicate(items: list[dict]) -> list[dict]:
     """Remove duplicates by exact title match."""
     seen = set()
