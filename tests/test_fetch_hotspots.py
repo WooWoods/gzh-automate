@@ -289,6 +289,73 @@ class TestFetchBilibili:
         assert items[0]["hot"] == 0
 
 
+class TestCompositeFetchers:
+    """Tests for composite (unified -> native fallback) fetchers."""
+
+    def test_fetch_zhihu_composite_unified_succeeds(self):
+        """When unified API works, its result is used directly."""
+        from wewrite.commands.fetch_hotspots import _fetch_with_fallback
+
+        def unified_ok():
+            return [{"title": "知乎热点", "source": "知乎", "hot": 100,
+                     "url": "", "description": ""}]
+
+        def native():
+            return [{"title": "不应该被调用", "source": "知乎", "hot": 999,
+                     "url": "", "description": ""}]
+
+        items = _fetch_with_fallback("zhihu", unified_ok, native)
+        assert len(items) == 1
+        assert items[0]["hot"] == 100
+
+    def test_fetch_zhihu_composite_unified_fails_falls_back(self):
+        """When unified API returns [], native API is used instead."""
+        from wewrite.commands.fetch_hotspots import _fetch_with_fallback
+
+        def unified_empty():
+            return []
+
+        def native():
+            return [{"title": "知乎原生热点", "source": "知乎", "hot": 200,
+                     "url": "", "description": ""}]
+
+        items = _fetch_with_fallback("zhihu", unified_empty, native)
+        assert len(items) == 1
+        assert items[0]["hot"] == 200
+        assert items[0]["title"] == "知乎原生热点"
+
+    def test_fetch_with_fallback_both_fail(self):
+        """When both tiers fail, returns [] gracefully."""
+        from wewrite.commands.fetch_hotspots import _fetch_with_fallback
+
+        def fail1():
+            raise Exception("unified down")
+
+        def fail2():
+            raise Exception("native down")
+
+        items = _fetch_with_fallback("test", fail1, fail2)
+        assert items == []
+
+
+class TestParseHeatValue:
+    """Tests for _parse_heat_value edge cases."""
+
+    def test_parses_wan_heat_suffix_format(self):
+        """Heat strings like '1000 万热度' are parsed after stripping '热度' suffix."""
+        from wewrite.commands.fetch_hotspots import _parse_heat_value
+
+        assert _parse_heat_value("1000 万热度") == 10000000
+        assert _parse_heat_value("800 万热度") == 8000000
+
+    def test_parses_stripped_suffixes(self):
+        """Common suffixes (热度, 讨论, 阅读) are stripped before parsing."""
+        from wewrite.commands.fetch_hotspots import _parse_heat_value
+
+        assert _parse_heat_value("500 万讨论") == 5000000
+        assert _parse_heat_value("300 万阅读") == 3000000
+
+
 class TestFullPipeline:
     """Integration-style tests for the full hotspot pipeline."""
 
@@ -357,6 +424,7 @@ class TestFullPipeline:
            return_value=[{"title": "IT之家测试",
                           "source": "IT之家", "hot": 5000,
                           "url": "https://ithome.com", "description": ""}])
+    @patch("wewrite.commands.fetch_hotspots.fetch_unified", return_value=[])
     @patch("sys.argv", ["fetch_hotspots.py"])
     def test_pipeline_gracefully_handles_all_failures(
         self, *mocks,

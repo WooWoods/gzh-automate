@@ -151,11 +151,19 @@ _UNIFIED_PLATFORM_LABELS: dict[str, str] = {
 
 
 def _parse_heat_value(raw_heat) -> int:
-    """Parse a heat value that may be a string like '123.4万' or '1.2亿'."""
+    """Parse a heat value that may be a string like '123.4万' or '1.2亿'.
+
+    Strips trailing non-numeric suffixes like '热度', '讨论', '阅读' before
+    parsing, so that strings like '1000 万热度' are handled correctly.
+    """
     if isinstance(raw_heat, (int, float)):
         return int(raw_heat)
     if isinstance(raw_heat, str):
         raw_heat = raw_heat.strip()
+        # Strip common trailing suffixes that are not part of the number
+        for trailing in ("热度", "讨论", "阅读"):
+            if raw_heat.endswith(trailing):
+                raw_heat = raw_heat[: -len(trailing)].strip()
         multipliers = {"亿": 100000000, "万": 10000}
         for suffix, mult in multipliers.items():
             if suffix in raw_heat:
@@ -306,6 +314,31 @@ def fetch_ithome() -> list[dict]:
     return fetch_unified("ithome")
 
 
+def _fetch_with_fallback(
+    name: str,
+    tier1: callable,
+    tier2: callable,
+) -> list[dict]:
+    """Try tier1 first; if it returns [], try tier2.
+
+    Any exception from tier1 is caught and tier2 is tried.
+    If both fail, returns [].
+    """
+    try:
+        items = tier1()
+        if items:
+            return items
+    except Exception as e:
+        print(f"[warn] {name} tier1 failed: {e}, trying tier2...",
+              file=sys.stderr)
+
+    try:
+        return tier2()
+    except Exception as e:
+        print(f"[warn] {name} tier2 also failed: {e}", file=sys.stderr)
+        return []
+
+
 def deduplicate(items: list[dict]) -> list[dict]:
     """Remove duplicates by exact title match."""
     seen = set()
@@ -333,8 +366,18 @@ def main():
         "weibo": fetch_weibo,
         "toutiao": fetch_toutiao,
         "baidu": fetch_baidu,
-        "zhihu": fetch_zhihu,
-        "bilibili": fetch_bilibili,
+        # Zhihu and Bilibili: unified API first, native API fallback
+        "zhihu": lambda: _fetch_with_fallback(
+            "zhihu",
+            lambda: fetch_unified("zhihu"),
+            fetch_zhihu,
+        ),
+        "bilibili": lambda: _fetch_with_fallback(
+            "bilibili",
+            lambda: fetch_unified("bilibili"),
+            fetch_bilibili,
+        ),
+        # Unified-only platforms
         "douyin": fetch_douyin,
         "douban": fetch_douban,
         "thepaper": fetch_thepaper,
