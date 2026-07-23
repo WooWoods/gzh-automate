@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from wewrite.commands.fetch_hotspots import (
     fetch_unified,
     fetch_zhihu,
+    fetch_bilibili,
     deduplicate,
 )
 
@@ -196,3 +197,93 @@ class TestFetchZhihu:
         ):
             items = fetch_zhihu()
         assert items == []
+
+
+class TestFetchBilibili:
+    """Tests for the Bilibili native API fetcher."""
+
+    def test_parses_bilibili_popular_list(self):
+        """Valid Bilibili API response produces items with correct fields."""
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {
+            "data": {
+                "list": [
+                    {
+                        "title": "【4K】绝美风景",
+                        "bvid": "BV1xx411c7mD",
+                        "tname": "旅游",
+                        "stat": {"view": 1234567, "like": 89012, "reply": 3456},
+                    },
+                    {
+                        "title": "2025最新科技解读",
+                        "bvid": "BV2yy522d8nE",
+                        "tname": "科技",
+                        "stat": {"view": 987654, "like": 76543, "reply": 2109},
+                    },
+                ]
+            }
+        }
+        with patch(
+            "wewrite.commands.fetch_hotspots._request_with_retry",
+            return_value=mock_resp,
+        ):
+            items = fetch_bilibili()
+
+        assert len(items) == 2
+        assert items[0]["title"] == "【4K】绝美风景"
+        assert items[0]["source"] == "B站"
+        assert items[0]["hot"] == 1234567
+        assert items[0]["url"] == "https://www.bilibili.com/video/BV1xx411c7mD"
+        assert items[0]["description"] == "旅游"
+        assert items[1]["title"] == "2025最新科技解读"
+
+    def test_skips_items_with_empty_title(self):
+        """Items with empty title are filtered out."""
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {
+            "data": {
+                "list": [
+                    {"title": "", "bvid": "BVxxx", "tname": "",
+                     "stat": {"view": 100}},
+                    {"title": "有效视频", "bvid": "BVyyy", "tname": "科技",
+                     "stat": {"view": 200}},
+                ]
+            }
+        }
+        with patch(
+            "wewrite.commands.fetch_hotspots._request_with_retry",
+            return_value=mock_resp,
+        ):
+            items = fetch_bilibili()
+
+        assert len(items) == 1
+        assert items[0]["title"] == "有效视频"
+
+    def test_returns_empty_list_on_failure(self):
+        """Network error returns [] gracefully."""
+        with patch(
+            "wewrite.commands.fetch_hotspots._request_with_retry",
+            side_effect=Exception("Timeout"),
+        ):
+            items = fetch_bilibili()
+        assert items == []
+
+    def test_handles_missing_stat_key(self):
+        """Response without stat.view uses 0 as heat."""
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {
+            "data": {
+                "list": [
+                    {"title": "无统计数据", "bvid": "BVzzz", "tname": "",
+                     "stat": {}},
+                ]
+            }
+        }
+        with patch(
+            "wewrite.commands.fetch_hotspots._request_with_retry",
+            return_value=mock_resp,
+        ):
+            items = fetch_bilibili()
+
+        assert len(items) == 1
+        assert items[0]["hot"] == 0

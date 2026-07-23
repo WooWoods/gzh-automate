@@ -246,6 +246,37 @@ def fetch_zhihu() -> list[dict]:
         return []
 
 
+def fetch_bilibili() -> list[dict]:
+    """Fetch Bilibili popular videos via native API.
+
+    Uses api.bilibili.com/x/web-interface/popular which returns
+    the current top videos with view/like/reply stats.
+    """
+    try:
+        resp = _request_with_retry(
+            "https://api.bilibili.com/x/web-interface/popular?ps=20&pn=1",
+            source="bilibili",
+        )
+        data = resp.json()
+        items = []
+        for entry in data.get("data", {}).get("list", []):
+            title = (entry.get("title") or "").strip()
+            if not title:
+                continue
+            stat = entry.get("stat", {})
+            items.append({
+                "title": title,
+                "source": "B站",
+                "hot": int(stat.get("view", 0) or 0),
+                "url": f"https://www.bilibili.com/video/{entry.get('bvid', '')}",
+                "description": entry.get("tname", ""),
+            })
+        return items
+    except Exception as e:
+        print(f"[warn] bilibili failed: {e}", file=sys.stderr)
+        return []
+
+
 def deduplicate(items: list[dict]) -> list[dict]:
     """Remove duplicates by exact title match."""
     seen = set()
