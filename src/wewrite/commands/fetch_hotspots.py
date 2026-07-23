@@ -136,6 +136,82 @@ def fetch_baidu() -> list[dict]:
         return []
 
 
+# --- Unified API (60s.viki.moe) ---
+
+# Platform key → display name for the unified API
+_UNIFIED_PLATFORM_LABELS: dict[str, str] = {
+    "zhihu": "知乎",
+    "bilibili": "B站",
+    "douyin": "抖音",
+    "douban": "豆瓣",
+    "thepaper": "澎湃新闻",
+    "36kr": "36氪",
+    "ithome": "IT之家",
+}
+
+
+def _parse_heat_value(raw_heat) -> int:
+    """Parse a heat value that may be a string like '123.4万' or '1.2亿'."""
+    if isinstance(raw_heat, (int, float)):
+        return int(raw_heat)
+    if isinstance(raw_heat, str):
+        raw_heat = raw_heat.strip()
+        multipliers = {"亿": 100000000, "万": 10000}
+        for suffix, mult in multipliers.items():
+            if suffix in raw_heat:
+                try:
+                    return int(float(raw_heat.replace(suffix, "")) * mult)
+                except ValueError:
+                    continue
+        try:
+            return int(float(raw_heat))
+        except ValueError:
+            return 0
+    return 0
+
+
+def fetch_unified(platform: str) -> list[dict]:
+    """Fetch hot topics from a platform via the unified API (60s.viki.moe).
+
+    This is a fast, stable aggregator that returns structured JSON for
+    10 Chinese platforms. Use as Tier 1 for new platforms; native API
+    can serve as Tier 2 fallback.
+
+    Args:
+        platform: Platform key recognized by the unified API
+                   (e.g. 'zhihu', 'bilibili', 'douyin').
+
+    Returns:
+        List of standardized item dicts, or [] on any failure.
+    """
+    try:
+        resp = _request_with_retry(
+            f"https://60s.viki.moe/v2/{platform}",
+            source=f"unified:{platform}",
+        )
+        data = resp.json()
+        if not isinstance(data, dict) or "data" not in data:
+            return []
+
+        label = _UNIFIED_PLATFORM_LABELS.get(platform, platform)
+        items = []
+        for idx, entry in enumerate(data["data"]):
+            title = (entry.get("title") or "").strip()
+            if not title:
+                continue
+            items.append({
+                "title": title,
+                "source": label,
+                "hot": _parse_heat_value(entry.get("hot", 0)),
+                "url": entry.get("url", "") or "",
+                "description": "",
+            })
+        return items
+    except Exception as e:
+        print(f"[warn] unified:{platform} failed: {e}", file=sys.stderr)
+        return []
+
+
 def deduplicate(items: list[dict]) -> list[dict]:
     """Remove duplicates by exact title match."""
     seen = set()
