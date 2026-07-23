@@ -287,3 +287,97 @@ class TestFetchBilibili:
 
         assert len(items) == 1
         assert items[0]["hot"] == 0
+
+
+class TestFullPipeline:
+    """Integration-style tests for the full hotspot pipeline."""
+
+    def test_all_fetchers_in_main_dict(self):
+        """All 10 platform fetchers are registered."""
+        import wewrite.commands.fetch_hotspots as fh
+
+        expected = [
+            "fetch_weibo", "fetch_toutiao", "fetch_baidu",
+            "fetch_zhihu", "fetch_bilibili",
+            "fetch_douyin", "fetch_douban",
+            "fetch_thepaper", "fetch_36kr", "fetch_ithome",
+        ]
+        for name in expected:
+            assert hasattr(fh, name), f"Missing fetcher: {name}"
+            assert callable(getattr(fh, name)), f"{name} is not callable"
+
+    def test_deduplicate_removes_exact_title_duplicates(self):
+        """Exact title matches are deduplicated, keeping first occurrence."""
+        items = [
+            {"title": "  AI改变世界 ", "source": "微博", "hot": 100,
+             "url": "", "description": ""},
+            {"title": "AI改变世界", "source": "知乎", "hot": 200,
+             "url": "", "description": ""},
+            {"title": "另一话题", "source": "百度", "hot": 50,
+             "url": "", "description": ""},
+        ]
+        result = deduplicate(items)
+        assert len(result) == 2
+        # First occurrence wins (微博), after strip normalization
+        assert result[0]["source"] == "微博"
+
+    def test_deduplicate_strips_whitespace(self):
+        """Titles differing only in surrounding whitespace are duplicates."""
+        items = [
+            {"title": "话题", "source": "A", "hot": 1,
+             "url": "", "description": ""},
+            {"title": "  话题  ", "source": "B", "hot": 2,
+             "url": "", "description": ""},
+        ]
+        result = deduplicate(items)
+        assert len(result) == 1
+
+    def test_deduplicate_filters_empty_titles(self):
+        """Items with empty title (after strip) are removed."""
+        items = [
+            {"title": "   ", "source": "A", "hot": 1,
+             "url": "", "description": ""},
+            {"title": "有效", "source": "B", "hot": 2,
+             "url": "", "description": ""},
+        ]
+        result = deduplicate(items)
+        assert len(result) == 1
+        assert result[0]["title"] == "有效"
+
+    @patch("wewrite.commands.fetch_hotspots.fetch_weibo", return_value=[])
+    @patch("wewrite.commands.fetch_hotspots.fetch_toutiao", return_value=[])
+    @patch("wewrite.commands.fetch_hotspots.fetch_baidu", return_value=[])
+    @patch("wewrite.commands.fetch_hotspots.fetch_zhihu", return_value=[])
+    @patch("wewrite.commands.fetch_hotspots.fetch_bilibili", return_value=[])
+    @patch("wewrite.commands.fetch_hotspots.fetch_douyin", return_value=[])
+    @patch("wewrite.commands.fetch_hotspots.fetch_douban", return_value=[])
+    @patch("wewrite.commands.fetch_hotspots.fetch_thepaper", return_value=[])
+    @patch("wewrite.commands.fetch_hotspots.fetch_36kr", return_value=[])
+    @patch("wewrite.commands.fetch_hotspots.fetch_ithome",
+           return_value=[{"title": "IT之家测试",
+                          "source": "IT之家", "hot": 5000,
+                          "url": "https://ithome.com", "description": ""}])
+    @patch("sys.argv", ["fetch_hotspots.py"])
+    def test_pipeline_gracefully_handles_all_failures(
+        self, *mocks,
+    ):
+        """When most fetchers fail, the pipeline still produces output."""
+        import io
+
+        from wewrite.commands.fetch_hotspots import main as hotspot_main
+
+        # Capture stdout
+        stdout = io.StringIO()
+        with patch("sys.stdout", stdout):
+            hotspot_main()
+
+        output = json.loads(stdout.getvalue())
+        assert "timestamp" in output
+        assert "sources" in output
+        assert "sources_failed" in output
+        assert "count" in output
+        assert output["count"] >= 1
+        # The one working source should appear
+        assert "ithome" in output["sources"]
+        # Verify the item data came through
+        assert any(item["source"] == "IT之家" for item in output["items"])

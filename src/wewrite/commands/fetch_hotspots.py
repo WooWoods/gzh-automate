@@ -277,6 +277,35 @@ def fetch_bilibili() -> list[dict]:
         return []
 
 
+# --- Unified API thin wrappers ---
+# Platforms without reliable native APIs use the unified API exclusively.
+
+
+def fetch_douyin() -> list[dict]:
+    """Fetch Douyin hot topics via unified API."""
+    return fetch_unified("douyin")
+
+
+def fetch_douban() -> list[dict]:
+    """Fetch Douban trending topics via unified API."""
+    return fetch_unified("douban")
+
+
+def fetch_thepaper() -> list[dict]:
+    """Fetch ThePaper (澎湃新闻) hot topics via unified API."""
+    return fetch_unified("thepaper")
+
+
+def fetch_36kr() -> list[dict]:
+    """Fetch 36Kr hot topics via unified API."""
+    return fetch_unified("36kr")
+
+
+def fetch_ithome() -> list[dict]:
+    """Fetch IT之家 hot topics via unified API."""
+    return fetch_unified("ithome")
+
+
 def deduplicate(items: list[dict]) -> list[dict]:
     """Remove duplicates by exact title match."""
     seen = set()
@@ -300,8 +329,19 @@ def main():
     sources_ok = []
     sources_fail = []
 
-    fetchers = {"weibo": fetch_weibo, "toutiao": fetch_toutiao, "baidu": fetch_baidu}
-    with ThreadPoolExecutor(max_workers=3) as pool:
+    fetchers = {
+        "weibo": fetch_weibo,
+        "toutiao": fetch_toutiao,
+        "baidu": fetch_baidu,
+        "zhihu": fetch_zhihu,
+        "bilibili": fetch_bilibili,
+        "douyin": fetch_douyin,
+        "douban": fetch_douban,
+        "thepaper": fetch_thepaper,
+        "36kr": fetch_36kr,
+        "ithome": fetch_ithome,
+    }
+    with ThreadPoolExecutor(max_workers=min(10, len(fetchers))) as pool:
         futures = {pool.submit(fn): name for name, fn in fetchers.items()}
         for future in as_completed(futures):
             name = futures[future]
