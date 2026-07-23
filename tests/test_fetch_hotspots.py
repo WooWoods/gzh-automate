@@ -163,7 +163,9 @@ class TestFetchZhihu:
         assert items[0]["source"] == "知乎"
         assert items[0]["url"] == "https://www.zhihu.com/question/123456"
         assert items[0]["description"] == "AI正在改变世界..."
+        assert items[0]["hot"] == 10000000  # "1000 万热度" → 10000000
         assert items[1]["title"] == "2025年经济展望"
+        assert items[1]["hot"] == 8000000   # "800 万热度" → 8000000
 
     def test_skips_items_with_empty_title(self):
         """Items with empty target.title are filtered out."""
