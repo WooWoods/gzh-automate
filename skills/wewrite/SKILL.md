@@ -35,6 +35,7 @@ allowed-tools:
 |---|---|
 | 重设风格 | `wewrite-style` |
 | 只要选题 | `wewrite-topic` |
+| 起标题、分析标题 | `wewrite-title` |
 | 检查文章 | `wewrite-review` |
 | 封面或配图 | `wewrite-visual` |
 | 排版、预览、草稿箱、图片帖 | `wewrite-publish` |
