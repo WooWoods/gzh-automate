@@ -112,7 +112,7 @@ def register_skills(skills_src: Path, targets: list[Path]) -> int:
                 _remove_target(dest)
                 shutil.copytree(skill_dir, dest)
             linked += 1
-        print(f"  ✓ {linked} skills registered to {target}")
+        print(f"  [OK] {linked} skills registered to {target}")
 
     return len(skill_dirs)
 
@@ -134,7 +134,7 @@ def install_cli(repo: Path) -> None:
             ["uv", "tool", "install", "--force", str(repo)],
             check=True,
         )
-        print(f"  ✓ installed via uv")
+        print(f"  [OK] installed via uv")
         return
 
     if shutil.which("pipx"):
@@ -142,7 +142,7 @@ def install_cli(repo: Path) -> None:
             ["pipx", "install", "--force", str(repo)],
             check=True,
         )
-        print(f"  ✓ installed via pipx")
+        print(f"  [OK] installed via pipx")
         return
 
     # Fallback: pip install --editable into venv or current environment
@@ -187,7 +187,7 @@ def _install_via_pip(repo: Path) -> None:
     if os.name == "nt":
         # On Windows, add a PowerShell profile PATH entry or just warn
         user_bin = get_home() / "AppData" / "Local" / "Microsoft" / "WindowsApps"
-        print(f"  ⚠ wewrite installed to venv. Add to PATH or use full path:")
+        print(f"  [WARN] wewrite installed to venv. Add to PATH or use full path:")
         print(f"    {venv_wewrite}")
     else:
         local_bin = get_home() / ".local" / "bin"
@@ -198,7 +198,7 @@ def _install_via_pip(repo: Path) -> None:
             link_path.symlink_to(venv_wewrite.resolve())
         except OSError:
             shutil.copy(venv_wewrite, link_path)
-        print(f"  ✓ linked {link_path}")
+        print(f"  [OK] linked {link_path}")
         _warn_if_not_on_path(local_bin)
 
 
@@ -218,16 +218,16 @@ def _install_from_pypi() -> None:
 def _check_wewrite_on_path(repo: Path) -> None:
     """Check if wewrite is on PATH; warn if not."""
     if shutil.which("wewrite"):
-        print(f"  ✓ wewrite CLI ready: {shutil.which('wewrite')}")
+        print(f"  [OK] wewrite CLI ready: {shutil.which('wewrite')}")
     else:
-        print(f"  ⚠ wewrite not found on current PATH — restart terminal or check PATH")
+        print(f"  [WARN] wewrite not found on current PATH — restart terminal or check PATH")
 
 
 def _warn_if_not_on_path(bin_dir: Path) -> None:
     """Warn if a bin directory is not on PATH."""
     path_dirs = os.environ.get("PATH", "").split(os.pathsep)
     if str(bin_dir) not in path_dirs:
-        print(f"  ⚠ {bin_dir} is not on PATH. Add it to use 'wewrite' directly.")
+        print(f"  [WARN] {bin_dir} is not on PATH. Add it to use 'wewrite' directly.")
 
 
 def migrate_if_needed(repo: Path) -> None:
@@ -244,11 +244,11 @@ def migrate_if_needed(repo: Path) -> None:
 
     # Check if wewrite CLI is available for migration
     if not shutil.which("wewrite"):
-        print("  ⚠ Old state files found but wewrite CLI not on PATH.")
+        print("  [WARN] Old state files found but wewrite CLI not on PATH.")
         print(f"    Manually move to {get_home() / '.wewrite'} or re-run after CLI is available.")
         return
 
-    print("→ Detected old repo-root state files. Migrating...")
+    print("-> Detected old repo-root state files. Migrating...")
     try:
         result = subprocess.run(
             ["wewrite", "migrate", "--from", str(repo)],
@@ -256,13 +256,13 @@ def migrate_if_needed(repo: Path) -> None:
             text=True,
         )
         if result.returncode == 0:
-            print("  ✓ State migrated successfully")
+            print("  [OK] State migrated successfully")
         else:
-            print(f"  ⚠ Migration reported issues:\n{result.stderr}")
+            print(f"  [WARN] Migration reported issues:\n{result.stderr}")
     except subprocess.CalledProcessError as e:
-        print(f"  ⚠ Migration failed: {e}")
+        print(f"  [WARN] Migration failed: {e}")
     except FileNotFoundError:
-        print("  ⚠ wewrite CLI not available, skipping migration")
+        print("  [WARN] wewrite CLI not available, skipping migration")
 
 
 def main() -> None:
@@ -273,18 +273,18 @@ def main() -> None:
     args = parser.parse_args()
 
     repo = Path(__file__).resolve().parent
-    print(f"→ Installing WeWrite from {repo}")
+    print(f"-> Installing WeWrite from {repo}")
 
     # ---- 1) Install wewrite CLI ----
     if not args.no_cli:
-        print("→ Installing wewrite CLI...")
+        print("-> Installing wewrite CLI...")
         install_cli(repo)
     else:
         print("  (--no-cli: skipping)")
 
     # ---- 2) Register skills ----
     if not args.no_skills:
-        print("→ Registering skills...")
+        print("-> Registering skills...")
         skills_src = repo / "skills"
         targets = [
             get_claude_skills_dir(),
@@ -301,7 +301,7 @@ def main() -> None:
         print("  (--no-migrate: skipping)")
 
     print("")
-    print("✓ WeWrite installation complete.")
+    print("[OK] WeWrite installation complete.")
     print(f"  State directory: {get_home() / '.wewrite'}")
 
 
