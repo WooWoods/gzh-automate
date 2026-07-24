@@ -9,6 +9,7 @@ allowed-tools:
   - Write
   - Edit
   - Glob
+  - Skill
 ---
 
 # wewrite-visual — 封面与配图
@@ -24,34 +25,125 @@ allowed-tools:
 `<文件名>-illustrated.md`。
 
 根据本轮原话确定模式并用 `wewrite run update` 记录：只要封面用 `cover`，封面和必要内文图
-用 `full`，只要提示词用 `prompts`。不要沿用写作模式猜测用户想生图。`prompts` 或
-`skip_image_gen=true` 时仍要完成提示词，但不调用付费图片服务。
+用 `full`，只要提示词用 `prompts`。不要沿用写作模式猜测用户想生图。
 
-完整读取：
+## 核心原则
 
-```text
-读取: {skill_dir}/references/visual-guide.md
-```
+**本模块是编排层，不是执行层。** 封面的创意判断（类型、色板、渲染风格、文字层次、情绪）
+和配图的视觉设计（类型 × 风格 × 色板）由 baoyu 技能家族完成。本模块负责：
+
+1. 管理 wewrite 任务状态和产物路径
+2. 将文章内容和约束传递给 baoyu 技能
+3. 将 baoyu 产出映射回 wewrite 的 artifact 模型
+4. 执行 wewrite 特有的后处理：带图副本插入、任务状态更新
+
+baoyu 技能有自己的确认流程和交互设计 —— 不要跳过或压制它们的用户交互。
 
 ## 执行
 
-1. 从终稿提取 3-5 个具体实体和文章主情绪，形成统一色板、构图与质感。
-2. 写一个封面提示词。`cover` 模式到此为止；`full` 模式只为确实需要解释或缓冲阅读的
-   段落补图，不按固定数量凑图。
-3. 将提示词和目标路径写到 `artifacts.image_prompts`；批量清单写到
-   `artifacts.images_manifest`。
-4. 数量必须不超过任务的 `visual.max_images`。调用时同时传入数量和费用上限：
+### 1. 准备上下文
 
-```bash
-wewrite image-gen --manifest {run_dir}/images.json --max-images {max_images} --max-cost {max_cost}
+从 `artifacts.article` 读取终稿全文。确认以下约束并记录：
+
+- `visual.max_images`：最大配图数量
+- `visual.max_cost`：最大费用（为空则不限）
+- 文章主题、情绪基调（用于传递给 baoyu 技能作为上下文）
+
+将文章路径、主题摘要和约束写入任务目录下的 `visual-context.md` 供 baoyu 技能引用：
+
+```markdown
+# 配图上下文
+- 文章路径: {article_path}
+- 主题: {topic_summary}
+- 情绪: {mood}
+- 模式: {cover|full|prompts}
+- 最大配图数: {max_images}
+- 费用上限: {max_cost or "无"}
 ```
 
-`max_cost` 为空时省略该参数。预算预检不通过就减少内文图，不能绕过上限。图片服务失败时
-保留完整提示词并继续流程。
+### 2. 按模式执行
 
-5. 一次性检查所有实际文件：能打开、格式与扩展名一致、核心实体可辨、风格连贯。只重试
-   明显失败的单张一次。`full` 模式先复制原始正文到 `artifacts.illustrated_article`，再把
-   采用的内文图插到副本相应段落；封面不插入正文。任何模式都不得覆盖原始正文。
+#### cover 模式
+
+调用 `baoyu-cover-image` skill，传递：
+- 文章内容（文件路径或粘贴正文）
+- 封面比例 2.35:1（WeChat 封面标准）
+- 文章主题和情绪作为风格参考
+
+baoyu-cover-image 会完成：偏好加载 → 内容分析 → 选项确认 → 提示词生成 → 图片生成。
+完成后收集产出：
+
+1. 读取 baoyu 生成的封面图片路径
+2. 将提示词写入 `artifacts.image_prompts`（格式见第 3 节）
+3. 将封面信息写入 `artifacts.images_manifest`
+4. 将封面图片复制/移动到 wewrite 任务目录
+
+#### full 模式
+
+**先封面，后内文配图** —— 两步独立执行，共享风格上下文。
+
+**步骤 A：封面**
+同 cover 模式，调用 `baoyu-cover-image`。记录其确定的色板、渲染风格，作为后续内文配图的风格输入。
+
+**步骤 B：内文配图**
+调用 `baoyu-article-illustrator` skill，传递：
+- 文章内容（文件路径或粘贴正文）
+- 最大配图数 = `visual.max_images`
+- 风格偏好：沿用封面确定的色板和渲染风格以保持视觉一致性
+- 输出目录：wewrite 任务目录
+
+baoyu-article-illustrator 会完成：偏好加载 → 内容分析 → 插图位置识别 → 选项确认 →
+大纲生成 → 提示词生成 → 批量生图。完成后收集产出：
+
+1. 读取 baoyu 生成的配图文件和路径
+2. 将提示词写入 `artifacts.image_prompts`
+3. 将配图清单写入 `artifacts.images_manifest`
+4. 将封面和配图信息写入任务状态
+
+**步骤 C：插入内文图**
+先复制 `artifacts.article` 到 `artifacts.illustrated_article`，再将采用的
+内文图插到副本相应段落；封面不插入正文。任何模式都不得覆盖原始正文。
+
+#### prompts 模式
+
+执行对应的 baoyu 技能流程，但在生图步骤前停止。收集生成的提示词文本，
+写入 `artifacts.image_prompts`，明确告知用户提示词已就绪、未产生费用、
+没有实际图片。`skip_image_gen=true` 时同样处理。
+
+### 3. 产物格式
+
+`artifacts.image_prompts` 写入 Markdown：
+
+```markdown
+# 图片提示词 — {date}
+
+## 封面
+- 提示词: {cover_prompt}
+- 目标比例: 2.35:1
+
+## 内文图
+1. {position}: {prompt} → {output_path}
+2. ...
+```
+
+`artifacts.images_manifest` 写入 JSON：
+
+```json
+{
+  "cover": {"prompt": "...", "path": "cover.png", "ok": true},
+  "figures": [
+    {"position": "...", "prompt": "...", "path": "figure-01.png", "ok": true}
+  ]
+}
+```
+
+### 4. 质量检查与收尾
+
+- 一次性检查所有实际文件：能打开、格式与扩展名一致、核心实体可辨、风格连贯
+- 只重试明显失败的单张一次
+- 数量必须不超过 `visual.max_images`；超限时按必要性排序，只保留前 N 张
+- 费用预检不通过就减少内文图，不能绕过上限
+- 图片服务失败时保留完整提示词并继续流程
 
 完成后更新 `images.cover`、`images.figures`，再执行：
 

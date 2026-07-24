@@ -69,6 +69,6 @@ def test_content_enhancement_and_seo_do_not_force_fabrication_or_images():
 
 def test_visual_contract_enforces_count_and_cost_limits():
     visual = _read("skills/wewrite-visual/SKILL.md")
-    assert "--max-images" in visual
-    assert "--max-cost" in visual
+    assert "visual.max_images" in visual
+    assert "visual.max_cost" in visual
     assert "不能绕过上限" in visual
