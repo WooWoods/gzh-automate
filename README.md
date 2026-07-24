@@ -72,12 +72,31 @@
 
 ### 方式一：一键安装（推荐）
 
+**跨平台（Windows / macOS / Linux）：**
+
+```bash
+git clone --depth 1 https://github.com/imraywang/wewrite.git ~/wewrite
+cd ~/wewrite && python install.py
+```
+
+**Windows PowerShell：**
+
+```powershell
+git clone --depth 1 https://github.com/imraywang/wewrite.git $env:USERPROFILE\wewrite
+cd $env:USERPROFILE\wewrite
+.\install.ps1
+```
+
+**macOS / Linux：**
+
 ```bash
 git clone --depth 1 https://github.com/imraywang/wewrite.git ~/wewrite
 cd ~/wewrite && bash install.sh
 ```
 
-`install.sh` 做三件事：装 `wewrite` CLI（uv/pipx，无则回退 venv）、把 10 个 skill 链接到 `~/.claude/skills/` 与 `~/.agents/skills/`（检测到 OpenClaw / Codex 时一并链接其 skills 目录）、把旧版用户状态迁到 `~/.wewrite/`。
+安装脚本做三件事：装 `wewrite` CLI（uv/pipx，无则回退 pip）、把 10 个 skill 注册到 `~/.claude/skills/` 与 `~/.agents/skills/`（检测到 OpenClaw / Codex 时一并注册）、把旧版用户状态迁到 `~/.wewrite/`。
+
+> **Windows 用户注意：** 符号链接在 Windows 上需要开发者模式或管理员权限。没有启用时，安装脚本会自动回退为复制 skill 目录。更新仓库后重新运行安装脚本即可同步 skill 变更。
 
 ### 方式二：skills.sh 按需挑模块
 
@@ -377,7 +396,7 @@ State 层（全部在 `~/.wewrite/`，不在仓库）：`config.yaml`、`style.y
 对 Agent 说「更新」，或手动：
 
 ```bash
-cd <仓库路径> && git pull && bash install.sh
+cd <仓库路径> && git pull && python install.py
 ```
 
 从 v2.1 及更早版本升级时，install.sh 会自动把仓库里的旧用户状态迁到 `~/.wewrite/`。
