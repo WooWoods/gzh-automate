@@ -11,11 +11,13 @@ Environment variable mapping:
     WEWRITE_IMAGE_PROVIDER  → image.provider
     WEWRITE_IMAGE_API_KEY   → image.api_key
     WEWRITE_IMAGE_MODEL     → image.model
-    WEWRITE_WRITER_PROVIDER → llm.provider
-    WEWRITE_WRITER_API_KEY  → llm.api_key
-    WEWRITE_WRITER_BASE_URL → llm.base_url
-    WEWRITE_WRITER_MODEL    → llm.model
-    WEWRITE_THEME           → theme
+    WEWRITE_WRITER_PROVIDER    → llm.provider
+    WEWRITE_WRITER_API_KEY     → llm.api_key
+    WEWRITE_WRITER_BASE_URL    → llm.base_url
+    WEWRITE_WRITER_MODEL       → llm.model
+    WEWRITE_WRITER_TEMPERATURE → llm.temperature
+    WEWRITE_WRITER_MAX_TOKENS  → llm.max_tokens
+    WEWRITE_THEME              → theme
 """
 
 import os
@@ -41,6 +43,8 @@ _ENV_OVERRIDES = {
     ("llm", "api_key"): "WEWRITE_WRITER_API_KEY",
     ("llm", "base_url"): "WEWRITE_WRITER_BASE_URL",
     ("llm", "model"): "WEWRITE_WRITER_MODEL",
+    ("llm", "temperature"): "WEWRITE_WRITER_TEMPERATURE",
+    ("llm", "max_tokens"): "WEWRITE_WRITER_MAX_TOKENS",
     ("theme",): "WEWRITE_THEME",
 }
 

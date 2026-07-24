@@ -15,13 +15,13 @@ brief 文件由编排 agent 写好：选题 / 框架 / **真实素材锚点** / 
 退出码（供 SKILL.md 分支降级）：
     0 成功；3 未配置写作模型（→ 降级为 agent 自写）；4 调用失败（→ 降级或重试）。
 
-配置（环境变量）：
-    WEWRITE_WRITER_API_KEY      写作模型 key（缺省则退出码 3）
-    WEWRITE_WRITER_PROVIDER     deepseek|openai|…（默认 deepseek，仅作标识；走 OpenAI 兼容协议）
-    WEWRITE_WRITER_BASE_URL     默认 https://api.deepseek.com
-    WEWRITE_WRITER_MODEL        默认 deepseek-chat
-    WEWRITE_WRITER_TEMPERATURE  默认 1.0（保留表达变化，但别太高以免编造事实）
-    WEWRITE_WRITER_MAX_TOKENS   默认 4000
+配置（config.yaml 为主，环境变量可覆盖敏感值）:
+    config.yaml llm.api_key 或 WEWRITE_WRITER_API_KEY         写作模型 key（必需）
+    config.yaml llm.provider 或 WEWRITE_WRITER_PROVIDER       deepseek|openai|moonshot|…（默认 deepseek）
+    config.yaml llm.base_url 或 WEWRITE_WRITER_BASE_URL       默认 https://api.deepseek.com
+    config.yaml llm.model 或 WEWRITE_WRITER_MODEL             默认 deepseek-chat
+    config.yaml llm.temperature                               默认 1.0（仅 config.yaml）
+    config.yaml llm.max_tokens                                默认 4000（仅 config.yaml）
 """
 from __future__ import annotations
 

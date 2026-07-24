@@ -463,3 +463,41 @@ def test_diagnose_warns_when_no_llm_writer_configured(tmp_path, monkeypatch):
     llm_check = next(c for c in checks if c["name"] == "llm_writer")
     assert llm_check["status"] == "warn"
     assert diagnose.runtime_flags(checks)["use_writer_model"] is False
+
+
+def test_llm_write_loads_config_from_yaml(tmp_path, monkeypatch):
+    """_load_config() reads llm section from config.yaml via unified loader."""
+    from wewrite.commands import llm_write
+    from wewrite.toolkit import config as config_module
+
+    path = tmp_path / "config.yaml"
+    path.write_text(
+        yaml.safe_dump({"llm": {"api_key": "sk-test-config", "provider": "moonshot",
+                                 "model": "moonshot-v1", "base_url": "https://api.moonshot.cn",
+                                 "temperature": 0.7, "max_tokens": 8000}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(config_module, "CONFIG_SEARCH_ORDER", [path])
+    config_module.load_config(force_reload=True)
+    cfg = llm_write._load_config()
+    assert cfg["key"] == "sk-test-config"
+    assert cfg["provider"] == "moonshot"
+    assert cfg["model"] == "moonshot-v1"
+    assert cfg["base_url"] == "https://api.moonshot.cn"
+    assert cfg["temperature"] == 0.7
+    assert cfg["max_tokens"] == 8000
+
+
+def test_llm_write_exits_3_when_not_configured(tmp_path, monkeypatch):
+    """_load_config() exits with code 3 when no api_key in config or env."""
+    from wewrite.commands import llm_write
+    from wewrite.toolkit import config as config_module
+
+    path = tmp_path / "config.yaml"
+    path.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(config_module, "CONFIG_SEARCH_ORDER", [path])
+    config_module.load_config(force_reload=True)
+    monkeypatch.delenv("WEWRITE_WRITER_API_KEY", raising=False)
+    with pytest.raises(SystemExit) as exc_info:
+        llm_write._load_config()
+    assert exc_info.value.code == 3
