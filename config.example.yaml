@@ -33,7 +33,7 @@ image:
   provider: "agnes"           # 见上表 Provider 列
   api_key: "sk-your-agnes-key"
   estimated_cost_per_image: 0.04  # 用于预算预检；按你的实际价格修改
-  # model: "doubao-seedream-5-0-260128"   # 可选，各 provider 有默认值
+  model: "agnes-image-2.1-flash"   # 可选，各 provider 有默认值
   # base_url: "https://ark.cn-beijing.volces.com/api/v3"  # 可选
 
 # 方式二：多 provider 自动 fallback（推荐）
@@ -74,9 +74,9 @@ image:
 # 不配则 Claude Code 自己写；配了就调用外部 LLM 生成正文。
 # 支持任何 OpenAI 兼容接口。
 llm:
-  provider: "deepseek"                # deepseek | openai | moonshot | ...（仅作标识）
+  provider: "agnes"                # deepseek | openai | moonshot | ...（仅作标识）
   api_key: "sk-your-deepseek-key"     # API key
-  # base_url: "https://api.deepseek.com"     # 可选，默认 https://api.deepseek.com
+  base_url: "https://apihub.agnes-ai.com"     # 可选，默认 https://api.deepseek.com
   # model: "deepseek-chat"                   # 可选，默认 deepseek-chat
   # temperature: 1.0                         # 可选，默认 1.0
   # max_tokens: 4000                          # 可选，默认 4000
