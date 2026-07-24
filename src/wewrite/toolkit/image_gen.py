@@ -74,7 +74,7 @@ SIZE_PRESETS = {
         "doubao": "2952x1256", "openai": _DEFAULT, "gemini": _DEFAULT,
         "dashscope": _DEFAULT, "minimax": _DEFAULT, "replicate": _DEFAULT,
         "azure_openai": _DEFAULT, "openrouter": _DEFAULT, "jimeng": _DEFAULT,
-        "agnes": "2048x872",    # ~2.35:1, both divisible by 32, long edge 2048
+        "agnes": "2048x896",    # ~2.29:1, both divisible by 32, long edge 2048
     },
     "article": {
         "doubao": "2560x1440", "openai": _DEFAULT, "gemini": _DEFAULT,
