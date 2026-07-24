@@ -48,17 +48,23 @@ def _anti_ai_system() -> str:
 
 
 def _load_config() -> dict:
-    key = os.environ.get("WEWRITE_WRITER_API_KEY", "").strip()
+    from ..toolkit.config import load_config
+
+    cfg = load_config()
+    llm = cfg.get("llm", {}) or {}
+
+    key = llm.get("api_key", "").strip()
     if not key:
-        print("WRITER_NOT_CONFIGURED: 未配置 WEWRITE_WRITER_API_KEY", file=sys.stderr)
+        print("WRITER_NOT_CONFIGURED: 未在 config.yaml 配置 llm.api_key，"
+              "也未设置 WEWRITE_WRITER_API_KEY 环境变量", file=sys.stderr)
         sys.exit(3)
     return {
-        "provider": os.environ.get("WEWRITE_WRITER_PROVIDER", "deepseek"),
+        "provider": llm.get("provider", "deepseek"),
         "key": key,
-        "base_url": os.environ.get("WEWRITE_WRITER_BASE_URL", "https://api.deepseek.com").rstrip("/"),
-        "model": os.environ.get("WEWRITE_WRITER_MODEL", "deepseek-chat"),
-        "temperature": float(os.environ.get("WEWRITE_WRITER_TEMPERATURE", "1.0")),
-        "max_tokens": int(os.environ.get("WEWRITE_WRITER_MAX_TOKENS", "4000")),
+        "base_url": llm.get("base_url", "https://api.deepseek.com").rstrip("/"),
+        "model": llm.get("model", "deepseek-chat"),
+        "temperature": float(llm.get("temperature", 1.0)),
+        "max_tokens": int(llm.get("max_tokens", 4000)),
     }
 
 
