@@ -166,6 +166,47 @@ function Check-WewriteOnPath {
     }
 }
 
+function Migrate-OldState {
+    param([string]$Repo)
+
+    $oldFiles = @(
+        (Join-Path $Repo "style.yaml"),
+        (Join-Path $Repo "history.yaml"),
+        (Join-Path $Repo "config.yaml")
+    )
+
+    $hasOldState = $false
+    foreach ($f in $oldFiles) {
+        if (Test-Path $f) {
+            $hasOldState = $true
+            break
+        }
+    }
+
+    if (-not $hasOldState) {
+        Write-Host "  (no old state files found, skipping)"
+        return
+    }
+
+    if (-not (Get-Command wewrite -ErrorAction SilentlyContinue)) {
+        Write-Host "  ⚠ Old state files found but wewrite CLI not available."
+        Write-Host "    Re-run install.ps1 after CLI is installed."
+        return
+    }
+
+    Write-Host "→ Old repo-root state files detected. Migrating..."
+    try {
+        wewrite migrate --from $Repo
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  ✓ State migrated successfully"
+        } else {
+            Write-Host "  ⚠ Migration reported issues (exit code: $LASTEXITCODE)"
+        }
+    } catch {
+        Write-Host "  ⚠ Migration error: $_"
+    }
+}
+
 Write-Host "→ Installing WeWrite from $Repo"
 
 # ---- 1) Install CLI ----
@@ -189,7 +230,7 @@ if (-not $NoSkills) {
 # ---- 3) Migrate ----
 if (-not $NoMigrate) {
     Write-Host "→ Checking for old state..."
-    # (Task 6 fills this in)
+    Migrate-OldState -Repo $Repo
 } else {
     Write-Host "  (--no-migrate: skipping)"
 }
