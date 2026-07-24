@@ -142,14 +142,29 @@ function Install-WewriteCli {
         if ($?) { Write-Host "  [OK] installed via pipx"; return }
     }
 
-    # Fallback: pip install -e
-    Write-Host "  (no uv/pipx found, installing via pip)"
-    python -m pip install --quiet -e $Repo
-    if ($?) {
-        Write-Host "  [OK] installed via pip (editable)"
+    # Fallback: pip install into venv
+    Write-Host "  (no uv/pipx found, installing via pip into venv)"
+    $venvDir = Join-Path $Repo ".venv"
+    if (-not (Test-Path $venvDir)) {
+        python -m venv $venvDir
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "  [FAIL] Failed to create venv. Check that Python 3.11+ is installed."
+            exit 1
+        }
+    }
+    $venvPython = if ($env:OS -eq "Windows_NT") { Join-Path $venvDir "Scripts\python.exe" } else { Join-Path $venvDir "bin\python" }
+    & $venvPython -m pip install --quiet --upgrade pip | Out-Null
+    & $venvPython -m pip install --quiet -e $Repo
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "  [OK] installed via pip into venv"
+        Write-Host "  [WARN] Add wewrite to PATH or use the full path:"
+        if ($env:OS -eq "Windows_NT") {
+            Write-Host "    $(Join-Path $venvDir 'Scripts\wewrite.exe')"
+        } else {
+            Write-Host "    $(Join-Path $venvDir 'bin\wewrite')"
+        }
     } else {
-        Write-Host "  [FAIL] pip install failed. Check that Python 3.11+ is installed."
-        Write-Host "    python --version"
+        Write-Host "  [FAIL] pip install failed. Check your network and try again."
         exit 1
     }
     Check-WewriteOnPath

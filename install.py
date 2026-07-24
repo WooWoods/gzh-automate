@@ -259,8 +259,6 @@ def migrate_if_needed(repo: Path) -> None:
             print("  [OK] State migrated successfully")
         else:
             print(f"  [WARN] Migration reported issues:\n{result.stderr}")
-    except subprocess.CalledProcessError as e:
-        print(f"  [WARN] Migration failed: {e}")
     except FileNotFoundError:
         print("  [WARN] wewrite CLI not available, skipping migration")
 
