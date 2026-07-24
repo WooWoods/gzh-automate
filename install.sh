@@ -17,6 +17,16 @@
 
 set -euo pipefail
 
+# Guard: if running on Windows (Git Bash, MSYS, Cygwin), direct to native installers
+case "$(uname -s 2>/dev/null || true)" in
+  MINGW*|MSYS*|CYGWIN*)
+    echo "⚠ This is a Unix install script. On Windows, use one of:" >&2
+    echo "  python install.py              (recommended, cross-platform)" >&2
+    echo "  powershell -File install.ps1   (native PowerShell)"
+    exit 1
+    ;;
+esac
+
 cd "$(dirname "$0")"
 REPO="$(pwd)"
 
