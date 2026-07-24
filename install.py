@@ -117,6 +117,119 @@ def register_skills(skills_src: Path, targets: list[Path]) -> int:
     return len(skill_dirs)
 
 
+def install_cli(repo: Path) -> None:
+    """Install the wewrite CLI package.
+
+    Tries in order: uv, pipx, pip. On all platforms, uv and pipx
+    install into isolated environments and link the entry point onto PATH.
+    The pip fallback installs into the current Python environment.
+    """
+    if not (repo / "pyproject.toml").exists():
+        print("  (no pyproject.toml at repo root — installing from PyPI)")
+        _install_from_pypi()
+        return
+
+    if shutil.which("uv"):
+        subprocess.run(
+            ["uv", "tool", "install", "--force", str(repo)],
+            check=True,
+        )
+        print(f"  ✓ installed via uv")
+        return
+
+    if shutil.which("pipx"):
+        subprocess.run(
+            ["pipx", "install", "--force", str(repo)],
+            check=True,
+        )
+        print(f"  ✓ installed via pipx")
+        return
+
+    # Fallback: pip install --editable into venv or current environment
+    print("  (no uv/pipx found, installing via pip)")
+    _install_via_pip(repo)
+
+
+def _install_via_pip(repo: Path) -> None:
+    """Install via pip, creating a venv if not already in one."""
+    # If we're already in a venv, just pip install -e
+    if sys.prefix != sys.base_prefix:
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--quiet", "-e", str(repo)],
+            check=True,
+        )
+        _check_wewrite_on_path(repo)
+        return
+
+    # Not in a venv — create one
+    venv_dir = repo / ".venv"
+    if not venv_dir.is_dir():
+        subprocess.run([sys.executable, "-m", "venv", str(venv_dir)], check=True)
+
+    # Platform-aware venv paths
+    if os.name == "nt":
+        venv_python = venv_dir / "Scripts" / "python.exe"
+        venv_wewrite = venv_dir / "Scripts" / "wewrite.exe"
+    else:
+        venv_python = venv_dir / "bin" / "python"
+        venv_wewrite = venv_dir / "bin" / "wewrite"
+
+    subprocess.run(
+        [str(venv_python), "-m", "pip", "install", "--quiet", "--upgrade", "pip"],
+        check=True,
+    )
+    subprocess.run(
+        [str(venv_python), "-m", "pip", "install", "--quiet", "-e", str(repo)],
+        check=True,
+    )
+
+    # Link wewrite into ~/.local/bin (Unix) or print PATH warning (Windows)
+    if os.name == "nt":
+        # On Windows, add a PowerShell profile PATH entry or just warn
+        user_bin = get_home() / "AppData" / "Local" / "Microsoft" / "WindowsApps"
+        print(f"  ⚠ wewrite installed to venv. Add to PATH or use full path:")
+        print(f"    {venv_wewrite}")
+    else:
+        local_bin = get_home() / ".local" / "bin"
+        local_bin.mkdir(parents=True, exist_ok=True)
+        link_path = local_bin / "wewrite"
+        _remove_target(link_path)
+        try:
+            link_path.symlink_to(venv_wewrite.resolve())
+        except OSError:
+            shutil.copy(venv_wewrite, link_path)
+        print(f"  ✓ linked {link_path}")
+        _warn_if_not_on_path(local_bin)
+
+
+def _install_from_pypi() -> None:
+    """Install wewrite from PyPI (for dist copies without pyproject.toml)."""
+    if shutil.which("uv"):
+        subprocess.run(["uv", "tool", "install", "--force", "wewrite"], check=True)
+    elif shutil.which("pipx"):
+        subprocess.run(["pipx", "install", "--force", "wewrite"], check=True)
+    else:
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--quiet", "wewrite"],
+            check=True,
+        )
+
+
+def _check_wewrite_on_path(repo: Path) -> None:
+    """Check if wewrite is on PATH; warn if not."""
+    if shutil.which("wewrite"):
+        print(f"  ✓ wewrite CLI ready: {shutil.which('wewrite')}")
+    else:
+        print(f"  ⚠ wewrite not found on current PATH — restart terminal or check PATH")
+
+
+def _warn_if_not_on_path(bin_dir: Path) -> None:
+    """Warn if a bin directory is not on PATH."""
+    path_dirs = os.environ.get("PATH", "").split(os.pathsep)
+    if str(bin_dir) not in path_dirs:
+        print(f"  ⚠ {bin_dir} is not on PATH. Add it to use 'wewrite' directly.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Cross-platform WeWrite installer")
     parser.add_argument("--no-cli", action="store_true", help="Skip CLI installation")
