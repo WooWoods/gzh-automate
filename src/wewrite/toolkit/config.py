@@ -5,13 +5,17 @@ Single source of truth for config loading. Environment variables
 override config.yaml values for sensitive fields.
 
 Environment variable mapping:
-    WECHAT_APPID          → wechat.appid
-    WECHAT_SECRET         → wechat.secret
-    WECHAT_AUTHOR         → wechat.author
-    WEWRITE_IMAGE_PROVIDER → image.provider
-    WEWRITE_IMAGE_API_KEY  → image.api_key
-    WEWRITE_IMAGE_MODEL    → image.model
-    WEWRITE_THEME          → theme
+    WECHAT_APPID            → wechat.appid
+    WECHAT_SECRET           → wechat.secret
+    WECHAT_AUTHOR           → wechat.author
+    WEWRITE_IMAGE_PROVIDER  → image.provider
+    WEWRITE_IMAGE_API_KEY   → image.api_key
+    WEWRITE_IMAGE_MODEL     → image.model
+    WEWRITE_WRITER_PROVIDER → llm.provider
+    WEWRITE_WRITER_API_KEY  → llm.api_key
+    WEWRITE_WRITER_BASE_URL → llm.base_url
+    WEWRITE_WRITER_MODEL    → llm.model
+    WEWRITE_THEME           → theme
 """
 
 import os
@@ -33,6 +37,10 @@ _ENV_OVERRIDES = {
     ("image", "provider"): "WEWRITE_IMAGE_PROVIDER",
     ("image", "api_key"): "WEWRITE_IMAGE_API_KEY",
     ("image", "model"): "WEWRITE_IMAGE_MODEL",
+    ("llm", "provider"): "WEWRITE_WRITER_PROVIDER",
+    ("llm", "api_key"): "WEWRITE_WRITER_API_KEY",
+    ("llm", "base_url"): "WEWRITE_WRITER_BASE_URL",
+    ("llm", "model"): "WEWRITE_WRITER_MODEL",
     ("theme",): "WEWRITE_THEME",
 }
 
