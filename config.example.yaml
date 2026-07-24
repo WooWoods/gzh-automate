@@ -13,7 +13,7 @@ wechat:
 # ┌─────────────────┬────────────────────────────────────────────────┬────────────────────┐
 # │ Provider        │ 获取 API Key                                   │ 特点               │
 # ├─────────────────┼────────────────────────────────────────────────┼────────────────────┤
-# │ agnes           │ https://apihub.agnes-ai.com                    │ 高信息密度、复杂排版│
+# │ agnes           │ https://apihub.agnes-ai.com                    │高信息密度、复杂排版│
 # │ doubao          │ https://console.volcengine.com/ark             │ 中文提示词最优     │
 # │ dashscope       │ https://dashscope.console.aliyun.com/          │ 阿里通义万相       │
 # │ jimeng          │ https://console.volcengine.com/iam             │ 字节即梦，中文强   │
@@ -31,7 +31,7 @@ wechat:
 # 方式一：单 provider（简单用法，填一个就行）
 image:
   provider: "agnes"           # 见上表 Provider 列
-  api_key: "sk-BgpiIjRPty7uTXldxkwGBhS3qJi3HitCBZw0o1TJFVbxR20S"
+  api_key: "sk-your-agnes-key"
   estimated_cost_per_image: 0.04  # 用于预算预检；按你的实际价格修改
   # model: "doubao-seedream-5-0-260128"   # 可选，各 provider 有默认值
   # base_url: "https://ark.cn-beijing.volces.com/api/v3"  # 可选
