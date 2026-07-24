@@ -230,6 +230,41 @@ def _warn_if_not_on_path(bin_dir: Path) -> None:
         print(f"  ⚠ {bin_dir} is not on PATH. Add it to use 'wewrite' directly.")
 
 
+def migrate_if_needed(repo: Path) -> None:
+    """Detect pre-v2.2 repo-root state files and migrate to ~/.wewrite/."""
+    old_state_files = [
+        repo / "style.yaml",
+        repo / "history.yaml",
+        repo / "config.yaml",
+    ]
+    has_old_state = any(f.exists() for f in old_state_files)
+
+    if not has_old_state:
+        return
+
+    # Check if wewrite CLI is available for migration
+    if not shutil.which("wewrite"):
+        print("  ⚠ Old state files found but wewrite CLI not on PATH.")
+        print(f"    Manually move to {get_home() / '.wewrite'} or re-run after CLI is available.")
+        return
+
+    print("→ Detected old repo-root state files. Migrating...")
+    try:
+        result = subprocess.run(
+            ["wewrite", "migrate", "--from", str(repo)],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            print("  ✓ State migrated successfully")
+        else:
+            print(f"  ⚠ Migration reported issues:\n{result.stderr}")
+    except subprocess.CalledProcessError as e:
+        print(f"  ⚠ Migration failed: {e}")
+    except FileNotFoundError:
+        print("  ⚠ wewrite CLI not available, skipping migration")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Cross-platform WeWrite installer")
     parser.add_argument("--no-cli", action="store_true", help="Skip CLI installation")
