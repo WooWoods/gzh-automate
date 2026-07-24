@@ -108,13 +108,23 @@ function Install-WewriteCli {
     $hasPyproject = Test-Path (Join-Path $Repo "pyproject.toml")
 
     if (-not $hasPyproject) {
-        Write-Host "  (no pyproject.toml found — installing from PyPI)"
+        Write-Host "  (no pyproject.toml found -- installing from PyPI)"
+        $installed = $false
         if (Get-Command uv -ErrorAction SilentlyContinue) {
             uv tool install --force wewrite
-        } elseif (Get-Command pipx -ErrorAction SilentlyContinue) {
+            if ($LASTEXITCODE -eq 0) { $installed = $true; Write-Host "  ✓ installed via uv" }
+        }
+        if (-not $installed -and (Get-Command pipx -ErrorAction SilentlyContinue)) {
             pipx install --force wewrite
-        } else {
+            if ($LASTEXITCODE -eq 0) { $installed = $true; Write-Host "  ✓ installed via pipx" }
+        }
+        if (-not $installed) {
             python -m pip install --quiet wewrite
+            if ($LASTEXITCODE -eq 0) { $installed = $true; Write-Host "  ✓ installed via pip" }
+        }
+        if (-not $installed) {
+            Write-Host "  ✗ All install methods failed. Check your network and try again."
+            exit 1
         }
         Check-WewriteOnPath
         return
