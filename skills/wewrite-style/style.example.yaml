@@ -26,7 +26,7 @@ content_style: "干货"
 # 可选：midnight-friend / industry-observer / sharp-journalist / warm-editor /
 # cold-analyst / humor-storyteller / tech-coder
 # 详见 personas/ 目录
-writing_persona: "midnight-friend"
+writing_persona: "humor-storyteller"
 
 # 禁忌
 blacklist:

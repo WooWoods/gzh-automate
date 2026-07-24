@@ -31,10 +31,10 @@ wechat:
 # 方式一：单 provider（简单用法，填一个就行）
 image:
   provider: "agnes"           # 见上表 Provider 列
-  api_key: "sk-your-agnes-key"
+  api_key: "sk-"
   estimated_cost_per_image: 0.04  # 用于预算预检；按你的实际价格修改
   model: "agnes-image-2.1-flash"   # 可选，各 provider 有默认值
-  # base_url: "https://ark.cn-beijing.volces.com/api/v3"  # 可选
+  base_url: "https://apihub.agnes-ai.com/v1/images/generations"  # 可选
 
 # 方式二：多 provider 自动 fallback（推荐）
 # 按顺序尝试，第一个失败自动切换下一个，不需要全部填写
@@ -75,9 +75,9 @@ image:
 # 支持任何 OpenAI 兼容接口。
 llm:
   provider: "agnes"                # deepseek | openai | moonshot | ...（仅作标识）
-  api_key: "sk-your-deepseek-key"     # API key
+  api_key: "sk-"     # API key
   base_url: "https://apihub.agnes-ai.com"     # 可选，默认 https://api.deepseek.com
-  # model: "deepseek-chat"                   # 可选，默认 deepseek-chat
+  model: "agnes-2.5-flash"                   # 可选，默认 deepseek-chat
   # temperature: 1.0                         # 可选，默认 1.0
   # max_tokens: 4000                          # 可选，默认 4000
 

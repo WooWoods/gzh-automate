@@ -770,17 +770,22 @@ class AgnesProvider(ImageProvider):
             headers={"Content-Type": "application/json",
                      "Authorization": f"Bearer {self._api_key}"},
             json={"model": self._model, "prompt": prompt,
-                  "size": size, "response_format": "url", "n": 1},
+                  "size": size, "n": 1},
             timeout=120,
         )
         data = resp.json()
         if resp.status_code != 200:
             raise ValueError(f"Agnes error ({resp.status_code}): "
                              f"{data.get('error', {}).get('message', str(data))}")
-        url = data.get("data", [{}])[0].get("url")
-        if not url:
-            raise ValueError(f"No image URL in Agnes response: {data}")
-        return _download_image(url)
+        item = data.get("data", [{}])[0]
+        url = item.get("url")
+        if url:
+            return _download_image(url)
+        b64 = item.get("b64_json")
+        if b64:
+            import base64
+            return base64.b64decode(b64)
+        raise ValueError(f"No image URL or b64_json in Agnes response: {data}")
 
 
 # --- Provider registry ---
