@@ -424,3 +424,42 @@ def test_wechat_draft_requires_cover_and_uses_timeout(monkeypatch):
     monkeypatch.setattr(publisher.requests, "post", fake_post)
     publisher.create_draft("token", "title", "<p>x</p>", "digest", "cover")
     assert captured["timeout"] == 30
+
+
+def test_diagnose_detects_llm_writer_from_config_yaml(tmp_path, monkeypatch):
+    """llm.api_key in config.yaml → llm_writer check passes → use_writer_model=true"""
+    path = tmp_path / "config.yaml"
+    path.write_text(
+        yaml.safe_dump({"llm": {"provider": "deepseek", "api_key": "sk-test"}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(diagnose.paths, "config_path", lambda: path)
+    checks = diagnose.check_config()
+    llm_check = next(c for c in checks if c["name"] == "llm_writer")
+    assert llm_check["status"] == "pass"
+    assert diagnose.runtime_flags(checks)["use_writer_model"] is True
+
+
+def test_diagnose_detects_llm_writer_from_env(tmp_path, monkeypatch):
+    """WEWRITE_WRITER_API_KEY env var → llm_writer check passes → use_writer_model=true"""
+    path = tmp_path / "config.yaml"
+    path.write_text("{}", encoding="utf-8")  # empty config
+    monkeypatch.setattr(diagnose.paths, "config_path", lambda: path)
+    monkeypatch.setenv("WEWRITE_WRITER_API_KEY", "sk-env-test")
+    checks = diagnose.check_config()
+    llm_check = next(c for c in checks if c["name"] == "llm_writer")
+    assert llm_check["status"] == "pass"
+    assert diagnose.runtime_flags(checks)["use_writer_model"] is True
+
+
+def test_diagnose_warns_when_no_llm_writer_configured(tmp_path, monkeypatch):
+    """No config + no env → llm_writer check warns → use_writer_model=false"""
+    path = tmp_path / "config.yaml"
+    path.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(diagnose.paths, "config_path", lambda: path)
+    # Ensure env var is unset
+    monkeypatch.delenv("WEWRITE_WRITER_API_KEY", raising=False)
+    checks = diagnose.check_config()
+    llm_check = next(c for c in checks if c["name"] == "llm_writer")
+    assert llm_check["status"] == "warn"
+    assert diagnose.runtime_flags(checks)["use_writer_model"] is False

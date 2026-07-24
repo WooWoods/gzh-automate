@@ -54,6 +54,7 @@ WEIGHTS = {
     "config_file": 0,
     "wechat_credentials": 0,
     "image_api_key": 0,
+    "llm_writer": 0,
     "config_permissions": 0,
 }
 
@@ -138,6 +139,15 @@ def check_config():
         checks.append(make_check("config", "image_api_key", "warn",
                                  "missing → image generation will be skipped", impact="skip_image_gen"))
 
+    # LLM writer: config.yaml or env — either is enough
+    llm = cfg.get("llm", {}) or {}
+    if llm.get("api_key") or _env_set("WEWRITE_WRITER_API_KEY"):
+        checks.append(make_check("config", "llm_writer", "pass", "configured"))
+    else:
+        checks.append(make_check("config", "llm_writer", "warn",
+                                 "missing → article generation uses Claude (higher cost)",
+                                 impact="use_writer_model"))
+
     return checks
 
 
@@ -145,12 +155,14 @@ def runtime_flags(checks):
     """管道运行标记，供 SKILL.md Step 1 一次性读取（env 优先，与 check_config 同源）。"""
     def warned(name):
         return any(c["name"] == name and c["status"] != "pass" for c in checks)
+    def passed(name):
+        return any(c["name"] == name and c["status"] == "pass" for c in checks)
     return {
         # 没有微信凭证 → 跳过发布；没有图片 key → 跳过生图
         "skip_publish": warned("wechat_credentials"),
         "skip_image_gen": warned("image_api_key"),
-        # 配了写作模型（混合路由）→ Step 4 走 llm_write.py；否则编排器自写
-        "use_writer_model": _env_set("WEWRITE_WRITER_API_KEY"),
+        # 配了写作模型（config.yaml 或 env）→ Step 4 走 llm_write.py；否则编排器自写
+        "use_writer_model": passed("llm_writer"),
         # 首次使用是正常设置流程，不是安装失败。
         "needs_onboard": warned("style_file"),
     }
