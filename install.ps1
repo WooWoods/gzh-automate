@@ -102,12 +102,66 @@ function Register-Skills {
     return $skillDirs.Count
 }
 
+function Install-WewriteCli {
+    param([string]$Repo)
+
+    $hasPyproject = Test-Path (Join-Path $Repo "pyproject.toml")
+
+    if (-not $hasPyproject) {
+        Write-Host "  (no pyproject.toml found — installing from PyPI)"
+        if (Get-Command uv -ErrorAction SilentlyContinue) {
+            uv tool install --force wewrite
+        } elseif (Get-Command pipx -ErrorAction SilentlyContinue) {
+            pipx install --force wewrite
+        } else {
+            python -m pip install --quiet wewrite
+        }
+        Check-WewriteOnPath
+        return
+    }
+
+    # Try uv first
+    if (Get-Command uv -ErrorAction SilentlyContinue) {
+        uv tool install --force $Repo
+        if ($?) { Write-Host "  ✓ installed via uv"; return }
+    }
+
+    # Try pipx
+    if (Get-Command pipx -ErrorAction SilentlyContinue) {
+        pipx install --force $Repo
+        if ($?) { Write-Host "  ✓ installed via pipx"; return }
+    }
+
+    # Fallback: pip install -e
+    Write-Host "  (no uv/pipx found, installing via pip)"
+    python -m pip install --quiet -e $Repo
+    if ($?) {
+        Write-Host "  ✓ installed via pip (editable)"
+    } else {
+        Write-Host "  ✗ pip install failed. Check that Python 3.11+ is installed."
+        Write-Host "    python --version"
+        exit 1
+    }
+    Check-WewriteOnPath
+}
+
+function Check-WewriteOnPath {
+    if (Get-Command wewrite -ErrorAction SilentlyContinue) {
+        $wewritePath = (Get-Command wewrite).Source
+        Write-Host "  ✓ wewrite CLI ready: $wewritePath"
+    } else {
+        Write-Host "  ⚠ wewrite not found on current PATH."
+        Write-Host "    Restart your terminal or add the Python Scripts directory to PATH."
+        Write-Host "    Usually: $env:APPDATA\Python\Python3*\Scripts"
+    }
+}
+
 Write-Host "→ Installing WeWrite from $Repo"
 
 # ---- 1) Install CLI ----
 if (-not $NoCli) {
     Write-Host "→ Installing wewrite CLI..."
-    # (Task 5 fills this in)
+    Install-WewriteCli -Repo $Repo
 } else {
     Write-Host "  (--no-cli: skipping)"
 }
@@ -116,7 +170,7 @@ if (-not $NoCli) {
 if (-not $NoSkills) {
     Write-Host "→ Registering skills..."
     $skillsSrc = Join-Path $Repo "skills"
-    $targets = @(Get-ClaudeSkillsDir, Get-AgentsSkillsDir) + (Get-ExtraSkillTargets)
+    $targets = @(Get-ClaudeSkillsDir; Get-AgentsSkillsDir) + (Get-ExtraSkillTargets)
     $null = Register-Skills -SkillsSrc $skillsSrc -Targets $targets
 } else {
     Write-Host "  (--no-skills: skipping)"
