@@ -74,21 +74,25 @@ SIZE_PRESETS = {
         "doubao": "2952x1256", "openai": _DEFAULT, "gemini": _DEFAULT,
         "dashscope": _DEFAULT, "minimax": _DEFAULT, "replicate": _DEFAULT,
         "azure_openai": _DEFAULT, "openrouter": _DEFAULT, "jimeng": _DEFAULT,
+        "agnes": "2048x872",    # ~2.35:1, both divisible by 32, long edge 2048
     },
     "article": {
         "doubao": "2560x1440", "openai": _DEFAULT, "gemini": _DEFAULT,
         "dashscope": _DEFAULT, "minimax": _DEFAULT, "replicate": _DEFAULT,
         "azure_openai": _DEFAULT, "openrouter": _DEFAULT, "jimeng": _DEFAULT,
+        "agnes": "2048x1152",   # 16:9, both divisible by 32
     },
     "vertical": {
         "doubao": "1088x2560", "openai": _DEFAULT_V, "gemini": _DEFAULT_V,
         "dashscope": _DEFAULT_V, "minimax": _DEFAULT_V, "replicate": _DEFAULT_V,
         "azure_openai": _DEFAULT_V, "openrouter": _DEFAULT_V, "jimeng": _DEFAULT_V,
+        "agnes": "1152x2048",   # 9:16, both divisible by 32
     },
     "square": {
         "doubao": "2048x2048", "openai": _DEFAULT_SQ, "gemini": _DEFAULT_SQ,
         "dashscope": _DEFAULT_SQ, "minimax": _DEFAULT_SQ, "replicate": _DEFAULT_SQ,
         "azure_openai": _DEFAULT_SQ, "openrouter": _DEFAULT_SQ, "jimeng": _DEFAULT_SQ,
+        "agnes": "1024x1024",   # 1:1, default size per Agnes docs
     },
 }
 
@@ -749,6 +753,36 @@ class Sub2APIProvider(ImageProvider):
         raise ValueError(f"Sub2API: task {task_id} timed out after {self._timeout:.0f}s")
 
 
+class AgnesProvider(ImageProvider):
+    """Agnes AI image generation via apihub.agnes-ai.com (OpenAI-compatible)."""
+
+    provider_key = "agnes"
+
+    def __init__(self, api_key: str, model: str = "agnes-image-2.1-flash",
+                 base_url: str = "https://apihub.agnes-ai.com/v1", **_kw):
+        self._api_key = api_key
+        self._model = model
+        self._base_url = base_url
+
+    def generate(self, prompt: str, size: str) -> bytes:
+        resp = requests.post(
+            f"{self._base_url}/images/generations",
+            headers={"Content-Type": "application/json",
+                     "Authorization": f"Bearer {self._api_key}"},
+            json={"model": self._model, "prompt": prompt,
+                  "size": size, "response_format": "url", "n": 1},
+            timeout=120,
+        )
+        data = resp.json()
+        if resp.status_code != 200:
+            raise ValueError(f"Agnes error ({resp.status_code}): "
+                             f"{data.get('error', {}).get('message', str(data))}")
+        url = data.get("data", [{}])[0].get("url")
+        if not url:
+            raise ValueError(f"No image URL in Agnes response: {data}")
+        return _download_image(url)
+
+
 # --- Provider registry ---
 
 PROVIDERS = {
@@ -762,6 +796,7 @@ PROVIDERS = {
     "openrouter": OpenRouterProvider,
     "jimeng": JimengProvider,
     "sub2api": Sub2APIProvider,
+    "agnes": AgnesProvider,
 }
 
 
