@@ -42,6 +42,7 @@ allowed-tools:
 | 学习修改、范文、主题 | `wewrite-learn` |
 | 数据复盘 | `wewrite-stats` |
 | 多平台改写 | `wewrite-rewrite` |
+| 去 AI 味润色 | humanizer（文件模式） |
 
 环境有 Skill 工具时激活同名 skill；否则完整读取兄弟目录的 `SKILL.md` 后执行。
 
@@ -84,6 +85,44 @@ wewrite run step topic completed
 
 执行 `wewrite-write`。先保存 `artifacts.brief` 和 `artifacts.claims`，再把初稿保存到
 `artifacts.draft`；所有网页素材同步记录到本任务的 `sources.yaml`。初稿不是成稿。
+
+### 4.5. 去 AI 味润色
+
+初稿保存后、审稿之前，先对 `artifacts.draft` 做去 AI 味润色。
+
+读取 `{skill_dir}/../humanizer/SKILL.md`：
+
+```text
+读取: {skill_dir}/../humanizer/SKILL.md
+```
+
+读取当前写作人格作为声音参考。按优先级读取 `{home}/personas/<name>.yaml`、内置
+`personas/<name>.yaml`，最后回退 `midnight-friend`。人格的节奏和语气偏好作为 humanizer
+的"写作样本"用于声音校准——例如 `midnight-friend` 的 `trailing_dash` 覆盖 humanizer
+的 em dash 禁令（§14）。
+
+进入时记录：
+
+```bash
+wewrite run step humanize in_progress
+```
+
+按 humanizer 的**文件模式**执行：识别并去除 AI 痕迹（不当强调、-ing 肤浅分析、推广式
+语言、模糊归属、AI 高频词汇、法则三、not only..but also、优雅变体、填充词、路标式宣告、
+格言句式等），保留所有事实、数字、日期和引用，不得添加源文本中不存在的任何细节。
+保持人格声音。原地覆写 `artifacts.draft`。
+
+完成后：
+
+```bash
+wewrite run step humanize completed
+```
+
+若失败则跳过润色，审稿直接在原始初稿上继续：
+
+```bash
+wewrite run step humanize failed --error "简短原因"
+```
 
 ### 5. 编辑审稿
 
@@ -133,7 +172,7 @@ wewrite run finish
 步骤失败时记录：
 
 ```bash
-wewrite run step <topic|write|review|visual|publish> failed --error "简短原因"
+wewrite run step <topic|write|humanize|review|visual|publish> failed --error "简短原因"
 ```
 
 内容步骤失败时保留当前任务，下次恢复后只重做失败或未完成的步骤。正文已经封存时，

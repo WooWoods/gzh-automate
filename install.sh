@@ -20,7 +20,7 @@ set -euo pipefail
 # Guard: if running on Windows (Git Bash, MSYS, Cygwin), direct to native installers
 case "$(uname -s 2>/dev/null || true)" in
   MINGW*|MSYS*|CYGWIN*)
-    echo "⚠ This is a Unix install script. On Windows, use one of:" >&2
+    echo "This is a Unix install script. On Windows, use one of:" >&2
     echo "  python install.py              (recommended, cross-platform)" >&2
     echo "  powershell -File install.ps1   (native PowerShell)"
     exit 1
@@ -36,7 +36,7 @@ SRC="$REPO"
 [ -f "$REPO/pyproject.toml" ] || SRC="$PYPI_SRC"
 
 # ---- 1) wewrite CLI ----
-echo "→ 安装 wewrite CLI（来源: $SRC）..."
+echo "-> 安装 wewrite CLI（来源: $SRC）..."
 if command -v uv >/dev/null 2>&1; then
   uv tool install --force "$SRC"
 elif command -v pipx >/dev/null 2>&1; then
@@ -45,7 +45,7 @@ else
   echo "  （未找到 uv/pipx，回退 venv editable 安装）"
   PYTHON="${PYTHON:-python3}"
   if ! command -v "$PYTHON" >/dev/null 2>&1; then
-    echo "✗ 找不到 $PYTHON。请先安装 Python 3.11+（macOS: brew install python）。" >&2
+    echo "找不到 $PYTHON。请先安装 Python 3.11+（macOS: brew install python）。" >&2
     exit 1
   fi
   [ -d .venv ] || "$PYTHON" -m venv .venv
@@ -59,11 +59,11 @@ else
   ln -sfn "$REPO/.venv/bin/wewrite" "$HOME/.local/bin/wewrite"
   case ":$PATH:" in
     *":$HOME/.local/bin:"*) ;;
-    *) echo "⚠ 请把 ~/.local/bin 加入 PATH（wewrite 命令链接在那里）" >&2 ;;
+    *) echo "请把 ~/.local/bin 加入 PATH（wewrite 命令链接在那里）" >&2 ;;
   esac
 fi
-command -v wewrite >/dev/null 2>&1 && echo "✓ wewrite CLI 就绪：$(command -v wewrite)" \
-  || echo "⚠ 当前 shell 尚未找到 wewrite，重开终端或检查 PATH" >&2
+command -v wewrite >/dev/null 2>&1 && echo "OK wewrite CLI 就绪：$(command -v wewrite)" \
+  || echo "当前 shell 尚未找到 wewrite，重开终端或检查 PATH" >&2
 
 # ---- 2) skill 链接：Claude Code + Agent-Skills 标准目录；
 #      装了 OpenClaw / Codex 的机器（其家目录已存在）也一并链接 ----
@@ -78,7 +78,7 @@ if [ -d skills ]; then
       resolved="$(cd "$SKILLS_TARGET" 2>/dev/null && pwd -P || true)"
       case "$resolved" in
         "$REPO"|"$REPO"/*)
-          echo "⚠ 跳过 $SKILLS_TARGET：它是指回本仓库的符号链接，请先 rm 掉再重跑" >&2
+          echo "跳过 $SKILLS_TARGET：它是指回本仓库的符号链接，请先 rm 掉再重跑" >&2
           continue
           ;;
       esac
@@ -91,7 +91,7 @@ if [ -d skills ]; then
       ln -sfn "$REPO/$d" "$SKILLS_TARGET/$name"
       linked=$((linked + 1))
     done
-    echo "✓ 已链接 $linked 个 skill 到 $SKILLS_TARGET"
+    echo "OK 已链接 $linked 个 skill 到 $SKILLS_TARGET"
   done
   echo "  单独激活示例：/wewrite-topic 选题、/wewrite-review 自检、/wewrite-rewrite 多平台改写"
 fi
@@ -99,10 +99,10 @@ fi
 # ---- 3) 旧状态迁移（v2.1 之前状态在仓库根）----
 if command -v wewrite >/dev/null 2>&1; then
   if [ -f "$REPO/style.yaml" ] || [ -f "$REPO/history.yaml" ] || [ -f "$REPO/config.yaml" ]; then
-    echo "→ 检测到仓库根有旧版用户状态，迁移到 $(wewrite home) ..."
+    echo "-> 检测到仓库根有旧版用户状态，迁移到 $(wewrite home) ..."
     wewrite migrate --from "$REPO"
   fi
 fi
 
 echo ""
-echo "✓ 完成。状态目录: $(command -v wewrite >/dev/null 2>&1 && wewrite home || echo '~/.wewrite')"
+echo "OK 完成。状态目录: $(command -v wewrite >/dev/null 2>&1 && wewrite home || echo '~/.wewrite')"
