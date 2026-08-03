@@ -88,13 +88,6 @@ class WeChatConverter:
         # Inject dark mode attributes
         html = self._inject_darkmode(html)
 
-        # Append AIGC declaration footer by default（合规：AI 生成/辅助内容需标识；
-        # 主题或配置显式设 aigc_footer: false 才关闭）。
-        raw = getattr(self._theme, '_raw_data', {}) or {}
-        aigc = raw.get('aigc_footer', self._theme.colors.get('aigc_footer', True))
-        if aigc:
-            html = self._append_aigc_footer(html)
-
         # Generate digest from plain text
         digest = self._generate_digest(html)
 
@@ -652,15 +645,6 @@ class WeChatConverter:
             num.string = f"{i:02d}"
             h2.insert(0, num)
         return str(soup)
-
-    # -- AIGC footer --
-
-    def _append_aigc_footer(self, html: str) -> str:
-        """Append AIGC declaration footer as required by WeChat platform rules."""
-        footer = ('<p style="text-align: center; font-size: 13px; color: #9ca3af; '
-                  'margin-top: 48px; padding-top: 24px; border-top: 1px solid #e5e7eb;">'
-                  '本文由 AI 辅助创作，作者进行了实测验证和编辑修改。</p>')
-        return html + '\n' + footer
 
     def _process_highlight(self, text: str) -> str:
         """Convert :::highlight blocks to amber highlight info boxes (Impeccable style)."""

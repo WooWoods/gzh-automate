@@ -118,6 +118,16 @@ wewrite run step humanize in_progress
 wewrite run step humanize completed
 ```
 
+humanize 完成后跑一次自检分数（改稿可能引入新问题）：
+
+```bash
+wewrite score {home}/runs/{run_id}/draft.md --json
+```
+
+质量分（`quality_score`）建议 ≥ 60，禁用词 0 个；分数低的项目区分"persona 设计"
+（如段子手单句段落、trailing_dash 节奏）vs"真实问题"（禁用词、套话堆砌、句式过齐），
+persona 保留、真实问题改掉，再跑一次直到分数稳定。
+
 若失败则跳过润色，审稿直接在原始初稿上继续：
 
 ```bash

@@ -38,7 +38,6 @@ colors:
     quote_border: "#3db897"
     highlight_bg: "#2a2518"
 # --- 特殊标记 ---
-aigc_footer: true
 base_css: |
   body {
     font-family: 'Noto Serif SC', 'Source Han Serif SC', Georgia, 'Songti SC', 'SimSun', serif;

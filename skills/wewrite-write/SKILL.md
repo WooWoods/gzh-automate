@@ -112,3 +112,48 @@ wewrite run step write completed
 
 单独调用时告诉用户初稿、任务书和主张清单路径，并建议继续 `wewrite-review`；不要把初稿称为
 已经审过的成稿。
+
+## 5. 去 AI 味润色（humanize）
+
+初稿保存后、审稿之前必须做去 AI 味润色。这一步是初稿到成稿的强制环节，不允许跳过——主
+流程 `wewrite` SKILL.md 早就要求了，子流程也必须执行，否则审稿拿到的是带 AI 痕迹的原始稿。
+
+读取 `{skill_dir}/../humanizer/SKILL.md`：
+
+```text
+读取: {skill_dir}/../humanizer/SKILL.md
+```
+
+按 humanizer 的**文件模式**执行：识别并去除 AI 痕迹（不当强调、-ing 肤浅分析、推广式
+语言、模糊归属、AI 高频词汇、法则三、not only..but also、优雅变体、填充词、路标式宣告、
+格言句式、em dash 滥用等），保留所有事实、数字、日期和引用，不得添加源文本中不存在的
+任何细节。保持人格声音——例如 `midnight-friend` 的 `trailing_dash` 覆盖 humanizer
+的 em dash 禁令。原地覆写 `artifacts.draft`。
+
+进入时记录：
+
+```bash
+wewrite run step humanize in_progress
+```
+
+完成后跑一次自检分数（humanizer 改稿可能引入新问题）：
+
+```bash
+wewrite score {home}/runs/{run_id}/draft.md --json
+```
+
+质量分（`quality_score`）建议 ≥ 60，禁用词 0 个；如果有低分项需要确认是 persona 设计
+（如段子手的单句段落、trailing_dash 节奏）还是真实问题，persona 设计保留，真实问题改掉。
+改完再跑一次直到分数稳定。
+
+完成：
+
+```bash
+wewrite run step humanize completed
+```
+
+若 humanize 失败（humanizer 不可读 / 源文件不可写），记录降级，审稿继续在原始初稿上做：
+
+```bash
+wewrite run step humanize failed --error "简短原因"
+```

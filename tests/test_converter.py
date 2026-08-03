@@ -2,7 +2,7 @@
 Comprehensive test suite for toolkit/converter.py — WeChatConverter.
 
 Covers: container syntax, CJK fixes, list conversion, link-to-footnote,
-dark mode injection, AIGC footer, CSS randomization, image processing,
+dark mode injection, CSS randomization, image processing,
 title/digest extraction, and theme integration.
 """
 
@@ -293,32 +293,8 @@ class TestDarkModeInjection:
         result = c.convert("# T\n\ntext")
         assert "data-darkmode" not in result.html
 
-
 # ===================================================================
-# 6. AIGC footer
-# ===================================================================
-
-class TestAIGCFooter:
-    def test_impeccable_has_aigc_footer(self, imp_converter):
-        result = imp_converter.convert("# T\n\n内容")
-        assert "AI 辅助创作" in result.html
-
-    def test_default_theme_has_aigc_footer(self, converter):
-        """AIGC footer is appended by default (合规标识)，即使主题没显式开启。"""
-        result = converter.convert("# T\n\n内容")
-        assert "AI 辅助创作" in result.html
-
-    def test_aigc_footer_can_be_disabled(self, pro_theme):
-        """aigc_footer: false 显式关闭脚注。"""
-        data = dict(getattr(pro_theme, "_raw_data", {}) or {})
-        data["aigc_footer"] = False
-        pro_theme._raw_data = data
-        result = WeChatConverter(theme=pro_theme).convert("# T\n\n内容")
-        assert "AI 辅助创作" not in result.html
-
-
-# ===================================================================
-# 7. Deterministic output (CSS fingerprint perturbation removed)
+# 6. Deterministic output (CSS fingerprint perturbation removed)
 # ===================================================================
 
 class TestDeterministicOutput:
@@ -340,7 +316,7 @@ class TestDeterministicOutput:
 
 
 # ===================================================================
-# 8. Image processing
+# 7. Image processing
 # ===================================================================
 
 class TestImageProcessing:
@@ -363,7 +339,7 @@ class TestImageProcessing:
 
 
 # ===================================================================
-# 9. Title / digest extraction
+# 8. Title / digest extraction
 # ===================================================================
 
 class TestTitleExtraction:
@@ -404,7 +380,7 @@ class TestDigestGeneration:
 
 
 # ===================================================================
-# 10. Theme integration
+# 9. Theme integration
 # ===================================================================
 
 class TestThemeIntegration:
